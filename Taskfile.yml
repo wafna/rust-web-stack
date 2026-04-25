@@ -1,0 +1,25 @@
+version: '3'
+silent: true
+
+# This can't go in included task files.
+dotenv: [ database/settings.env ]
+
+includes:
+  db:
+    taskfile: ./database/Taskfile.yml
+    dir: ./database
+
+tasks:
+  server:
+    - cargo run
+  demo:
+    - cabal run demo -- {{.CLI_ARGS}}
+  client:
+    - cabal run client -- {{.CLI_ARGS}}
+  build:
+    - cargo build
+  clean:
+    - cargo clean
+  ports:
+    cmds:
+      - lsof -nP -iTCP -sTCP:LISTEN

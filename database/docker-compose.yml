@@ -1,0 +1,36 @@
+# Starts a database container and an ephemeral flyway container.
+
+services:
+  database:
+    container_name: web_hs_db
+    image: postgres
+    restart: always
+    ports:
+      - "3001:5432"
+    environment:
+      - POSTGRES_USER=username
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=web_hs
+    networks:
+      - web_hs_network
+  # Sidecar flyway initializer.
+  flyway:
+    container_name: web_hs_flyway
+    image: flyway/flyway:10.15.2-alpine
+    platform: linux
+    command: "-locations=filesystem:/flyway/sql -connectRetries=3 migrate"
+    environment:
+      - FLYWAY_USER=username
+      - FLYWAY_PASSWORD=password
+      - FLYWAY_URL=jdbc:postgresql://web_hs_db:5432/web_hs
+      - FLYWAY_SCHEMAS=flyway
+    volumes:
+      - ./flyway:/flyway/sql
+    depends_on:
+      - database
+    networks:
+      - web_hs_network
+
+networks:
+  web_hs_network:
+    driver: bridge
