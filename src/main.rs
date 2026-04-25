@@ -1,10 +1,13 @@
 use axum::{
     extract::State,
     routing::get,
-    Router,
+    Json, Router,
 };
+use chrono::{NaiveDateTime};
+use serde::Serialize;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
+use sqlx::{FromRow, PgPool};
+use uuid::Uuid;
 use std::net::SocketAddr;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -36,6 +39,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(handler))
         .route("/health", get(health_check))
+        .route("/widgets", get(list_widgets))
         .with_state(pool);
 
     // Run it
@@ -57,4 +61,21 @@ async fn handler(State(pool): State<PgPool>) -> &'static str {
 
 async fn health_check() -> &'static str {
     "OK"
+}
+
+#[derive(Serialize, FromRow)]
+struct Widget {
+    id: Uuid,
+    name: String,
+    created_at: NaiveDateTime,
+    deleted_at: Option<NaiveDateTime>,
+}
+
+async fn list_widgets(State(pool): State<PgPool>) -> Json<Vec<Widget>> {
+    let widgets = sqlx::query_as::<_, Widget>("SELECT id, name, created_at, deleted_at FROM web_hs.widgets")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+    Json(widgets)
 }
